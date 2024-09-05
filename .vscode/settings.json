@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "dummytest.h": "c",
+        "stdlib.h": "c"
+    }
+}

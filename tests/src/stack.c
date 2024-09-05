@@ -65,8 +65,10 @@ dummy_code_t test_stack(const char* test_name)
     // FILE *output_test;
     // input_test = fopen("dataset/input_stack.txt", "r");
     // output_test = fopen("dataset/input_stack.txt", "r");
+    int a = 1, b = 2;
 
-    return DUMMY_TEST_SUCCESS;
+    dummy_assert(a, b, "");
+    DUMMY_SUCCESS;
     unsigned int comando = 0;
     char buffer[SIZE];
 
