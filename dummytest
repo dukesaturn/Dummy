@@ -1,0 +1,469 @@
+#!/usr/bin/env python3
+import sys
+import os
+import shutil
+import json
+
+dummy_tx_red = "\033[31m"
+dummy_tx_green = "\033[32m"
+dummy_tx_yellow = "\033[33m"
+dummy_tx_blue = "\033[34m"
+dummy_tx_italic = "\033[3m"
+dummy_tx_bold = "\033[1m"
+dummy_tx_reset = "\033[0m"
+dummy_bg_red = "\033[41m"
+dummy_bg_green = "\033[42m"
+dummy_bg_yellow = "\033[43m"
+dummy_bg_blue = "\033[44m"
+dummy_bg_magenta = "\033[45m"
+dummy_bg_white = "\033[47m"
+dummy_bg_black = "\033[40m"
+dummy_tx_underline = "\033[4m"
+
+
+path_tests = 'tests/src/'
+path_h = 'tests/include/'
+
+template_make_file = """
+CFLAGS += -Wall -Werror -std=gnu11 -O2
+LDFLAGS += -lm
+
+TARGET = test
+
+SRCS = test.c £
+OBJS = $(SRCS:.c=.o)
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(TARGET) $(OBJS)
+"""
+
+template_suite = '''#include <stdlib.h>
+#include <stdio.h>
+#include "../../include/dummytest.h"
+
+Dummy_single_test $[] = {};\n\n'''
+
+template_unit = '''dummy_code_t $(const char *test_name)
+{
+    //DUMMY_SKIP
+    /*
+     * Insert your unit test code here.
+     *
+     * Use assertions to evaluate expressions. For example:
+     * DUMMY_ASSERT(actual, expected, "Test description");
+     *
+     * Ensure that the test covers all relevant scenarios and includes appropriate error checks.
+     *
+     * Finally, call DUMMY_END to conclude the test.
+     */
+    DUMMY_END;
+}\n\n'''
+
+template_main = """
+#include <stdlib.h>
+#include <stdio.h>
+#include "include/dummytest.h"
+
+int main()
+{
+    print_logo();
+    dummy_test_suite($, £, @)
+}"""
+
+template_suite_h = """
+#ifndef @
+#define @
+
+#include <stdlib.h>
+#include <stdio.h>
+#include "../../include/dummytest.h"
+
+
+extern Dummy_single_test $[];
+#endif
+"""
+
+template_unit_func = """dummy_code_t $(const char *test_name);\n"""
+
+
+def replace_placeholder(str, name, ph):
+    index_sub_str = str.find(ph)
+    final_string = str[:(index_sub_str - 1)] + " " + name + \
+        str[(index_sub_str + 1): len(str)]
+    return final_string
+
+
+def insert_test_in_list(local_copy_file, suite_name, test_name):
+    func_name = "Dummy_single_test " + suite_name + "_tests[]"
+    func_index = local_copy_file.find(func_name)
+    value = '{' + test_name + ',' + '"' + test_name + '"' + '}'
+    print(value)
+
+    if (func_index == -1):
+        print(dummy_tx_red + "Error with file: " + dummy_tx_red + dummy_tx_bold +
+              func_name + dummy_tx_reset + dummy_tx_red + " is missing" + dummy_tx_reset)
+        exit()
+
+    offset_func = len(local_copy_file[:func_index])
+    start_bracket_index = local_copy_file[func_index:].find('{') + offset_func
+    end_bracket_index = local_copy_file[(start_bracket_index):].find(
+        '};') + start_bracket_index
+
+    if (start_bracket_index == -1 or end_bracket_index == -1 or start_bracket_index > end_bracket_index):
+        print(dummy_tx_red + "Error with file: " + dummy_tx_red + dummy_tx_bold +
+              "{}" + dummy_tx_reset + dummy_tx_red + " are missing" + dummy_tx_reset)
+        exit()
+
+    comma_counter = 0
+    is_void = True
+
+    for c in local_copy_file[start_bracket_index: end_bracket_index]:
+        if (c == ','):
+            comma_counter += 1
+
+    for c in local_copy_file[start_bracket_index + 1: end_bracket_index]:
+        if not c.isspace():
+            is_void = False
+            break
+
+    new_copy_file = ""
+
+    # When the list is void
+    if (comma_counter == 0 and is_void):
+        new_copy_file = local_copy_file[0: start_bracket_index] + local_copy_file[start_bracket_index] + \
+            value + local_copy_file[end_bracket_index:]
+    # Other cases
+    if (not is_void):
+        new_copy_file = local_copy_file[0: start_bracket_index] + \
+            local_copy_file[start_bracket_index: end_bracket_index] + \
+            ", " + value + local_copy_file[end_bracket_index:]
+
+    return new_copy_file
+
+
+def make_test(name):
+    index_suite = name.find(':')
+
+    if (index_suite == -1):
+        print("usage: dummytest --make test <suite_name>:<test_name>\nUse 'dummytest --help' for more information.")
+
+    suite_name = name[: (index_suite)]
+    test_name = "test_" + name[(index_suite + 1): len(name)]
+    try:
+        update_file = ""
+
+        with open("tests/src/test_" + suite_name + ".c", "r") as test_file:
+            local_copy_file = test_file.read()
+            if (local_copy_file.find(replace_placeholder(
+                    template_unit, test_name, '$')) != -1):
+                print(
+                    dummy_tx_yellow + "Test already exists. Choose a different name or remove the existing suite." + dummy_tx_reset)
+                exit()
+
+            new_copy_file = insert_test_in_list(
+                local_copy_file, suite_name, test_name)
+            file_content_unit = replace_placeholder(
+                template_unit, test_name, '$')
+            update_file = new_copy_file + file_content_unit
+
+        with open("tests/src/test_" + suite_name + ".c", "w") as test_file:
+            test_file.write(update_file)
+
+        update_h_file = ""
+
+        with open("tests/include/test_" + suite_name + ".h", "r") as h_file:
+            copy_h_file = h_file.read()
+            end_of_file = copy_h_file.find("#endif")
+            update_h_file = copy_h_file[:end_of_file] + replace_placeholder(
+                template_unit_func, test_name, '$') + copy_h_file[end_of_file:]
+
+        with open("tests/include/test_" + suite_name + ".h", "w") as h_file:
+            h_file.write(update_h_file)
+
+            print(dummy_tx_green + 'Test ' + dummy_tx_bold + name[(index_suite + 1): len(name)] + dummy_tx_reset +
+                  dummy_tx_green + ' is successfully created' + dummy_tx_reset)
+    except FileNotFoundError:
+        print(dummy_tx_red + "Suite" + dummy_tx_bold + " " + suite_name + " " +
+              dummy_tx_reset + dummy_tx_red + "doesn't exist" + dummy_tx_reset)
+
+
+def make_suite(name):
+    try:
+        with open("tests/src/test_" + name + ".c", "x") as test_file:
+            file_content = replace_placeholder(
+                template_suite, name + "_tests", '$')
+            test_file.write(file_content)
+
+            with open("tests/include/test_" + name + ".h", "x") as h_file:
+                h_content = replace_placeholder(
+                    template_suite_h, name + "_tests", '$')
+                upper_name = name.upper()
+                h_content = replace_placeholder(
+                    h_content, upper_name + "_TESTS", '@')
+                h_content = replace_placeholder(
+                    h_content, upper_name + "_TESTS", '@')
+                h_file.write(h_content)
+
+            print(dummy_tx_green + 'Suite ' + dummy_tx_bold + name + dummy_tx_reset +
+                  dummy_tx_green + ' is successfully created' + dummy_tx_reset)
+    except FileExistsError:
+        print(dummy_tx_yellow + "Suite already exists. Choose a different name or remove the existing suite." + dummy_tx_reset)
+
+
+def remove_suite(name):
+    path = "tests/src/test_" + name + ".c"
+    h_path = "tests/include/test_" + name + ".h"
+    if (os.path.exists(path) and os.path.exists(h_path)):
+        choice = input(dummy_tx_red + "Are you sure?[" + "y/" + dummy_tx_red +
+                       dummy_tx_bold + "N" + dummy_tx_reset + dummy_tx_red + "] " + dummy_tx_reset)
+        if (choice == "Y" or choice == 'y'):
+            os.remove(path)
+            os.remove(h_path)
+            print(dummy_tx_green + 'Suite ' + dummy_tx_bold + name + dummy_tx_reset +
+                  dummy_tx_green + ' is successfully deleted' + dummy_tx_reset)
+            exit()
+        elif (choice == 'N' or choice == 'n'):
+            exit()
+    else:
+        print(dummy_tx_yellow + "No Suite with this name was found" + dummy_tx_reset)
+
+
+def get_suite(path, name=""):
+    file_list = []
+    source_list = []
+    if (name != ""):
+        for f in os.listdir(path):
+            if (name == f):
+                file_list.append(f)
+                source_str = path + f
+                source_list.append(source_str)
+    else:
+        for f in os.listdir(path):
+            file_list.append(f)
+            source_str = path + f
+            source_list.append(source_str)
+    return source_list
+
+
+def get_suite_func():
+    h_list = get_suite(path_h, "")
+    func_list = []
+    for f in h_list:
+        with open(f, "r") as file:
+            file_content = file.read()
+            func_index = file_content.find("extern Dummy_single_test")
+            #print(file_content[func_index :])
+            comma_index = file_content[func_index :].find(";") + len(file_content[:func_index])
+            print(file_content[func_index:comma_index])
+            func_list.append(file_content[func_index : comma_index])
+            
+    return func_list
+            
+            
+            
+def create_main():
+    with open("test.c", "w") as main_file:
+        #file_content = replace_placeholder(template_main, , '$')
+        main_file.write(template_main)
+
+
+def take_tests(file_name, suite_name):
+    with open(file_name, "r") as file:
+        file_content = file.read()
+        func_name = "Dummy_single_test " + suite_name + "_tests[]"
+        func_index = file_content.find(func_name)
+        end_index = file_content[func_index:].find(
+            ';') + len(file_content[: func_index])
+        print(file_content[func_index: end_index])
+
+
+def remove_test(name):
+    print("ok")
+
+
+def dummy_init():
+    os.mkdir("tests")
+    os.makedirs("tests/src", exist_ok=True)
+    os.makedirs("tests/include", exist_ok=True)
+    os.mkdir("dataset")
+    print(dummy_tx_green + 'Project is successfully created' + dummy_tx_reset)
+
+
+def dummy_clean():
+    choice = input(dummy_tx_red + "Are you sure?[" + "y/" + dummy_tx_red +
+                   dummy_tx_bold + "N" + dummy_tx_reset + dummy_tx_red + "] " + dummy_tx_reset)
+    if (choice == "Y" or choice == 'y'):
+        if (os.path.exists("test.c")):
+            os.remove("test.c")
+        if (os.path.exists("test")):
+            os.remove("test")
+        if (os.path.exists("test.o")):
+            os.remove("test.o")
+        if (os.path.exists("config.json")):
+            os.remove("config.json")
+        if (os.path.exists("Makefile")):
+            os.remove("Makefile")
+        if (os.path.exists("dataset")):
+            shutil.rmtree("dataset")
+        if (os.path.exists("tests")):
+            shutil.rmtree("tests")
+        print(dummy_tx_green + 'Project is successfully cleaned' + dummy_tx_reset)
+
+
+
+def set_makefile(file_list):
+    if(os.path.exists("Makefile")):
+        os.remove("Makefile")
+    with open("Makefile", "x") as make_file:
+        src_list = " ".join(file_list) + "\n"
+        file_content = replace_placeholder(template_make_file, src_list, '£')
+        make_file.write(file_content)
+
+        
+
+
+def build_all():
+    create_main()
+    file_list = []
+    h_list = get_suite(path_h, "")
+    include_list = []
+    for i in h_list:
+        include_list.append('#include "' + i + '"\n')
+    local_copy = ""
+    with open("test.c", "r") as main_file:
+        local_copy = main_file.read()
+        include_index = local_copy.find('#include "include/dummytest.h"')
+        if (include_index == -1):
+            print(dummy_tx_green + "Error with file test.c: inclusion of " +
+                  dummy_tx_bold + "dummytest.h" + dummy_tx_reset + dummy_tx_green + "is missing")
+            exit()
+        new_local_copy = local_copy[:include_index] + \
+            "".join(include_list) + local_copy[include_index:]
+
+    with open("test.c", "w") as main_file:
+        main_file.write(new_local_copy)
+    set_makefile(get_suite(path_tests, ""))
+    os.system("make")
+
+
+def build_suite():
+    print("ok")
+
+
+def list(name):
+    funcs = []
+    if (os.path.exists("tests/include/test_" + name)):
+        print("Ok")
+
+
+def list_all():
+    print("ok")
+
+
+def list_suite():
+    print("ok")
+
+
+def config_json(field, value):
+    local_copy = {}
+    if (not os.path.exists("config.json")):
+        with open("config.json", "x") as config_file:
+            data = {field: value}
+            config_file.write(json.dumps(data))
+            print(dummy_tx_green + 'Config is successfully created' + dummy_tx_reset)
+    else:
+        try:
+            with open("config.json", "r") as config_file:
+                if (os.path.getsize("config.json") <= 0):
+                    local_copy = {}
+                else:
+                    local_copy = json.load(config_file)
+
+        except json.JSONDecodeError:
+            print(
+                dummy_tx_red + "Error with json decoding. Control if there is the config.json file")
+
+        local_copy[field] = value
+
+        with open("config.json", "w") as config_file:
+            config_file.write(json.dumps(local_copy))
+            print(dummy_tx_green + 'Config is successfully updated: ' + dummy_tx_bold + field +
+                  dummy_tx_reset + dummy_tx_green + " -> " + dummy_tx_bold + value + dummy_tx_reset)
+
+
+if (len(sys.argv) < 2):
+    print("usage: dummytest <action> <type> <name>\nUse 'dummytest --help' for more information.")
+    exit()
+
+
+if (sys.argv[1] == '-i' or sys.argv[1] == '--init'):
+    dummy_init()
+    if (len(sys.argv) == 3):
+        config_json('project', sys.argv[2])
+
+elif (sys.argv[1] == "-m" or sys.argv[1] == "--make"):
+    if (len(sys.argv) == 4):
+        match(sys.argv[2]):
+            case "suite":
+                make_suite(sys.argv[3])
+            case "test":
+                make_test(sys.argv[3])
+            case _:
+                print("usage: dummytest --make <type> <name>")
+    else:
+        print("usage: dummytest --make <type> <name>\nUse 'dummytest --help' for more information.")
+elif (sys.argv[1] == "-r" or sys.argv[1] == "--remove"):
+    if (len(sys.argv) == 4):
+        match(sys.argv[2]):
+            case "suite":
+                remove_suite(sys.argv[3])
+            case "test":
+                remove_test(sys.argv[3])
+            case _:
+                print("usage: dummytest --remove <type> <name>")
+    else:
+        print("usage: dummytest --remove <type> <name>\nUse 'dummytest --help' for more information.")
+elif (sys.argv[1] == "-b" or sys.argv[1] == "--build"):
+    if (len(sys.argv) >= 3):
+        match(sys.argv[2]):
+            case "all":
+                build_all()
+            case "suite":
+                build_suite()
+            case _:
+                print("usage: dummytest --build <type> <name>")
+    else:
+        print(
+            "usage: dummytest --build <mode>\nUse 'dummytest --help' for more information.")
+elif (sys.argv[1] == "-l" or sys.argv[1] == "--list"):
+    if (len(sys.argv) >= 3):
+        match(sys.argv[2]):
+            case "all":
+                list_all()
+            case "suite":
+                list_suite()
+            case _:
+                print("usage: dummytest --list <type> <name>")
+    else:
+        print(
+            "usage: dummytest --list <mode>\nUse 'dummytest --help' for more information.")
+elif (sys.argv[1] == "-R" or sys.argv[1] == "--run"):
+    if (os.path.exists("test")):
+        os.system("./test")
+    else:
+        print("First lanch --build command\nUse 'dummytest --help' for more information.")
+elif (sys.argv[1] == "-c" or sys.argv[1] == "--config"):
+    if (len(sys.argv) == 4):
+        config_json(sys.argv[2], sys.argv[3])
+    else:
+        print("usage: dummytest --config <field> <value>")
+elif (sys.argv[1] == "-C" or sys.argv[1] == "--clean"):
+    dummy_clean()
