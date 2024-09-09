@@ -3,6 +3,7 @@ import sys
 import os
 import shutil
 import json
+import re
 
 dummy_tx_red = "\033[31m"
 dummy_tx_green = "\033[32m"
@@ -20,12 +21,38 @@ dummy_bg_white = "\033[47m"
 dummy_bg_black = "\033[40m"
 dummy_tx_underline = "\033[4m"
 
-
+test_regex = r'dummy_code_t\s+(\w+)\(\)'
 path_tests = 'tests/src/'
 path_h = 'tests/include/'
 
+help_output = """
+Usage: dummytest <action> [options]
+
+Actions:
+  -i, --init [project_name]        Initialize the project. Optionally specify a project name.
+  -m, --make <type> <name>         Create a new suite or test. Type must be "suite" or "test".
+    suite <suite_name>             Create a new test suite.
+    test <suite_name>:<test_name>  Create a new test within a suite.
+  -r, --remove <type> <name>       Remove an existing suite or test. Type must be "suite" or "test".
+    suite <suite_name>             Remove a test suite.
+    test <suite_name>:<test_name>  Remove a test from a suite.
+  -b, --build <mode> [name]        Build the project or a specific suite.
+    all                            Build the entire project.
+    suite <suite_name>             Build a specific test suite.
+  -l, --list <type>                List suites or tests.
+    all                            List all tests.
+    suite <suite_name>             List tests in a specific suite.
+  -R, --run                        Run the tests.
+  -c, --config <field> <value>     Set or update configuration in config.json.
+  -C, --clean                      Clean up generated files and directories.
+  --help                           Show this help message and exit.
+
+For more information on a specific command, use 'dummytest <action> --help'.
+"""
+
+
 template_make_file = """
-CFLAGS += -Wall -Werror -std=gnu11 -O2
+CFLAGS += -Wall -Wextra -Werror -pedantic -Wconversion -Wshadow -std=c11 -O2
 LDFLAGS += -lm
 
 TARGET = test
@@ -51,14 +78,14 @@ template_suite = '''#include <stdlib.h>
 
 Dummy_single_test $[] = {};\n\n'''
 
-template_unit = '''dummy_code_t $(const char *test_name)
+template_unit = '''dummy_code_t $()
 {
-    //DUMMY_SKIP
+    //DUMMY_SKIP_HERE
     /*
      * Insert your unit test code here.
      *
      * Use assertions to evaluate expressions. For example:
-     * DUMMY_ASSERT(actual, expected, "Test description");
+     * DUMMY_ASSERT(actual, expected);
      *
      * Ensure that the test covers all relevant scenarios and includes appropriate error checks.
      *
@@ -75,8 +102,12 @@ template_main = """
 int main()
 {
     print_logo();
-    dummy_test_suite($, £, @)
+    return 0;
+
 }"""
+
+template_main_func = """
+\tdummy_test_suite($, £, @)"""
 
 template_suite_h = """
 #ifndef @
@@ -91,12 +122,12 @@ extern Dummy_single_test $[];
 #endif
 """
 
-template_unit_func = """dummy_code_t $(const char *test_name);\n"""
+template_unit_func = """dummy_code_t $();\n"""
 
 
 def replace_placeholder(str, name, ph):
     index_sub_str = str.find(ph)
-    final_string = str[:(index_sub_str - 1)] + " " + name + \
+    final_string = str[:(index_sub_str)]+ name + \
         str[(index_sub_str + 1): len(str)]
     return final_string
 
@@ -105,7 +136,6 @@ def insert_test_in_list(local_copy_file, suite_name, test_name):
     func_name = "Dummy_single_test " + suite_name + "_tests[]"
     func_index = local_copy_file.find(func_name)
     value = '{' + test_name + ',' + '"' + test_name + '"' + '}'
-    print(value)
 
     if (func_index == -1):
         print(dummy_tx_red + "Error with file: " + dummy_tx_red + dummy_tx_bold +
@@ -172,7 +202,10 @@ def make_test(name):
                 local_copy_file, suite_name, test_name)
             file_content_unit = replace_placeholder(
                 template_unit, test_name, '$')
-            update_file = new_copy_file + file_content_unit
+            suite_func_index = new_copy_file.find("Dummy_single_test")
+
+            update_file = new_copy_file[:suite_func_index] + \
+                file_content_unit + new_copy_file[suite_func_index:]
 
         with open("tests/src/test_" + suite_name + ".c", "w") as test_file:
             test_file.write(update_file)
@@ -241,7 +274,7 @@ def get_suite(path, name=""):
     source_list = []
     if (name != ""):
         for f in os.listdir(path):
-            if (name == f):
+            if (name == f and not f.find(".o")):
                 file_list.append(f)
                 source_str = path + f
                 source_list.append(source_str)
@@ -260,29 +293,25 @@ def get_suite_func():
         with open(f, "r") as file:
             file_content = file.read()
             func_index = file_content.find("extern Dummy_single_test")
-            #print(file_content[func_index :])
-            comma_index = file_content[func_index :].find(";") + len(file_content[:func_index])
+            # print(file_content[func_index :])
+            comma_index = file_content[func_index:].find(
+                ";") + len(file_content[:func_index])
             print(file_content[func_index:comma_index])
-            func_list.append(file_content[func_index : comma_index])
-            
+            func_list.append(file_content[func_index: comma_index])
+
     return func_list
-            
-            
-            
+
+
 def create_main():
     with open("test.c", "w") as main_file:
-        #file_content = replace_placeholder(template_main, , '$')
+        # file_content = replace_placeholder(template_main, , '$')
         main_file.write(template_main)
 
 
 def take_tests(file_name, suite_name):
     with open(file_name, "r") as file:
         file_content = file.read()
-        func_name = "Dummy_single_test " + suite_name + "_tests[]"
-        func_index = file_content.find(func_name)
-        end_index = file_content[func_index:].find(
-            ';') + len(file_content[: func_index])
-        print(file_content[func_index: end_index])
+        return re.findall(test_regex, file_content)
 
 
 def remove_test(name):
@@ -318,22 +347,48 @@ def dummy_clean():
         print(dummy_tx_green + 'Project is successfully cleaned' + dummy_tx_reset)
 
 
+def count_tests(name_suite):
+    with open("tests/src/test_" + name_suite + ".c", "r") as file:
+        content_file = file.read()
+        return content_file.count("dummy_code_t")
+
 
 def set_makefile(file_list):
+    # local_copy_json = {}
+    # with open("config.json", "r") as config_file:
+    #     if (os.path.getsize("config.json") <= 0):
+    #         local_copy_json = {}
+    #     else:
+    #         local_copy_json = json.load(config_file)
+    
     if(os.path.exists("Makefile")):
         os.remove("Makefile")
     with open("Makefile", "x") as make_file:
         src_list = " ".join(file_list) + "\n"
+        # std_v = "c11"
+        # if(local_copy_json["std"]):
+        #     std_v = local_copy_json["std"]
+            
         file_content = replace_placeholder(template_make_file, src_list, '£')
+        # file_content_std = replace_placeholder(file_content, std_v, '&')
         make_file.write(file_content)
 
+
+def clean_fp_in_str(file_path):
+    tmp_i = file_path.find("test_")
+    ext_i = file_path.find(".c")
+    return file_path[tmp_i + 5: ext_i - 1]
         
+def fill_void(str):
+    total = len(str)
+    return " " * (43 - total)
 
 
 def build_all():
     create_main()
     file_list = []
     h_list = get_suite(path_h, "")
+    src_list = get_suite(path_tests, "")
     include_list = []
     for i in h_list:
         include_list.append('#include "' + i + '"\n')
@@ -348,8 +403,25 @@ def build_all():
         new_local_copy = local_copy[:include_index] + \
             "".join(include_list) + local_copy[include_index:]
 
+    suite_list = []
+    
+    
+    for s in src_list:
+        if(s.find(".o") != -1):
+            continue
+        tmp_suite = s.split("tests/src/test_")
+        name_suite = tmp_suite[1].split(".c")
+        dec_suite = (replace_placeholder(template_main_func,  name_suite[0] + "_tests", "$" ))
+        len_suite = (replace_placeholder(dec_suite, str(count_tests(name_suite[0])), "£" ))
+        tok_suite = (replace_placeholder(len_suite, '"' + name_suite[0] + '"', "@" ))
+        suite_list.append(tok_suite)
+        
+    
     with open("test.c", "w") as main_file:
-        main_file.write(new_local_copy)
+        index_print_logo = new_local_copy.find("print_logo()")
+        comma_index = new_local_copy[index_print_logo:].find(";") + len(new_local_copy[:index_print_logo])
+        final_file = new_local_copy[:comma_index + 1] + "".join(suite_list) + new_local_copy[comma_index :]
+        main_file.write(final_file)
     set_makefile(get_suite(path_tests, ""))
     os.system("make")
 
@@ -358,14 +430,24 @@ def build_suite():
     print("ok")
 
 
-def list(name):
-    funcs = []
-    if (os.path.exists("tests/include/test_" + name)):
-        print("Ok")
 
 
 def list_all():
-    print("ok")
+    include_list = get_suite(path_h, "")
+    
+    
+    for l in include_list:
+        name = clean_fp_in_str(l) 
+        print( dummy_tx_bold + dummy_bg_blue + "SUITE                   " +  dummy_tx_reset + dummy_bg_blue +   name  + fill_void(name) + dummy_tx_reset)
+        tests = take_tests(l, name)
+        i = 1
+        for t in tests:
+            print(" " + str(i) + ".                     " + t )
+            i += 1
+
+def print_help():
+    print(help_output)
+
 
 
 def list_suite():
@@ -467,3 +549,7 @@ elif (sys.argv[1] == "-c" or sys.argv[1] == "--config"):
         print("usage: dummytest --config <field> <value>")
 elif (sys.argv[1] == "-C" or sys.argv[1] == "--clean"):
     dummy_clean()
+elif(sys.argv[1] == "-h" or sys.argv[1] == "--help"):
+    print_help()
+else:
+    print_help()
