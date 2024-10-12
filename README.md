@@ -1,3 +1,4 @@
+![version-alpha](https://img.shields.io/badge/version-alpha-orange)
 # dummy_test
 A dummy test tool for C
 
