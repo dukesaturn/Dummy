@@ -1,17 +1,18 @@
 ![version-alpha](https://img.shields.io/badge/version-alpha-orange)
 ![license](https://img.shields.io/badge/license-MIT-brightgreen)
+![C99](https://img.shields.io/badge/C-99-blue)
+![C11](https://img.shields.io/badge/C-11-brightgreen)
 
-# dummy_test
-A dummy test tool for C
+# Dummy Test
+
+**DummyTest** is a command-line tool designed to help you manage and execute test suites for your project. It allows you to initialize projects, create or remove test suites and individual tests, build and run the tests, manage configurations, and clean up the generated files. Below is a detailed guide on how to use the various commands available in DummyTest.
 
 ## Install
 
 Run this command in your terminal
 ```code
 git clone https://github.com/dukesaturn/dummy_test
-```
-
-## Usage 
+``` 
 In your work directory copy the package. 
 Then, run the following command
 ```
@@ -23,10 +24,6 @@ Run this command for initializing your project
 ```
 ./dummytest --init <name>
 ```
-
-# DummyTest Documentation
-
-**DummyTest** is a command-line tool designed to help you manage and execute test suites for your project. It allows you to initialize projects, create or remove test suites and individual tests, build and run the tests, manage configurations, and clean up the generated files. Below is a detailed guide on how to use the various commands available in DummyTest.
 
 ## Usage
 
