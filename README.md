@@ -1,7 +1,6 @@
 ![version-alpha](https://img.shields.io/badge/version-alpha-orange)
 ![license](https://img.shields.io/badge/license-MIT-brightgreen)
 ![C99](https://img.shields.io/badge/C-99-blue)
-![C11](https://img.shields.io/badge/C-11-brightgreen)
 
 # Dummy Test
 
