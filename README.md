@@ -1,4 +1,6 @@
 ![version-alpha](https://img.shields.io/badge/version-alpha-orange)
+![license](https://img.shields.io/badge/license-MIT-brightgreen)
+
 # dummy_test
 A dummy test tool for C
 
