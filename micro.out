@@ -1,0 +1,53 @@
+./dummys: line 3: import: command not found
+./dummys: line 4: import: command not found
+./dummys: line 5: import: command not found
+./dummys: line 6: import: command not found
+./dummys: line 7: import: command not found
+./dummys: line 12: 
+
+ // COLORS //
+
+: No such file or directory
+./dummys: line 13: dummy_tx_red: command not found
+./dummys: line 14: dummy_tx_green: command not found
+./dummys: line 15: dummy_tx_yellow: command not found
+./dummys: line 16: dummy_tx_blue: command not found
+./dummys: line 17: dummy_tx_italic: command not found
+./dummys: line 18: dummy_tx_bold: command not found
+./dummys: line 19: dummy_tx_reset: command not found
+./dummys: line 20: dummy_bg_red: command not found
+./dummys: line 21: dummy_bg_green: command not found
+./dummys: line 22: dummy_bg_yellow: command not found
+./dummys: line 23: dummy_bg_blue: command not found
+./dummys: line 24: dummy_bg_magenta: command not found
+./dummys: line 25: dummy_bg_white: command not found
+./dummys: line 26: dummy_bg_black: command not found
+./dummys: line 27: dummy_tx_underline: command not found
+./dummys: line 34: 
+
+ // CHUNKS //
+
+: No such file or directory
+./dummys: line 36: test_regex: command not found
+./dummys: line 37: path_tests: command not found
+./dummys: line 38: path_h: command not found
+./dummys: line 40: help_output: command not found
+./dummys: line 66: SRCS:.c=.o: command not found
+./dummys: line 66: TARGET: command not found
+./dummys: line 66: TARGET: command not found
+./dummys: line 66: OBJS: command not found
+./dummys: line 66: CC: command not found
+./dummys: line 66: LDFLAGS: command not found
+./dummys: line 66: CC: command not found
+./dummys: line 66: CFLAGS: command not found
+./dummys: line 66: TARGET: command not found
+./dummys: line 66: OBJS: command not found
+./dummys: line 66: template_make_file: command not found
+./dummys: line 87: template_suite: command not found
+./dummys: line 93: template_unit: command not found
+./dummys: line 109: template_main: command not found
+./dummys: line 121: template_main_func: command not found
+./dummys: line 124: template_suite_h: command not found
+./dummys: line 137: template_unit_func: command not found
+./dummys: line 519: syntax error near unexpected token `|'
+./dummys: line 519: `        "   |  __ \\                                  |__   __|      | |  \n"'
