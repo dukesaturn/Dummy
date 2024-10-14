@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "*.embeddedhtml": "html",
-        "dummytest.h": "c",
-        "stdlib.h": "c",
-        "test_ope.h": "c",
-        "time.h": "c"
-    }
-}

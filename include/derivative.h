@@ -1,0 +1,15 @@
+
+IFNDEF hypk_HYPK_H
+#DEFINE hypk_HYPK_H
+
+NAMESPACE HYPK{
+CLASS DERIVATIVE{
+
+   PUBLIC:
+       DERIVATIVE();
+       ~DERIVATIVE();
+};
+};
+
+#ENDIF
+

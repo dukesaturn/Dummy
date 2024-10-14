@@ -172,14 +172,14 @@ extern Dummy_single_test $[];
 template_unit_func = """dummy_code_t $();\n"""
 
 template_header_cpp = """
-IFNDEF $_H
-#define $_H
+IFNDEF *_H
+#define *_H
 
 class ${
 
    public:
        $();
-       ~();
+       ~$();
 };
 
 #endif
@@ -191,8 +191,8 @@ $::$(){}
 $::~$(){}
 """
 template_header_ns_cpp = """
-IFNDEF @_$_H
-#define @_$_H
+IFNDEF £_*_H
+#define £_*_H
 
 namespace @{
 class ${
@@ -687,7 +687,7 @@ def replace_placeholder(s, name, ph):
     """
     Replace in a string a certain token
     """
-    txt = s.replace(name, ph)
+    txt = s.replace( ph, name)
     return txt
 
 
@@ -1173,18 +1173,23 @@ def list_suite():
 def get_header(name, ns):
     if(ns):
         h_f =  replace_placeholder(template_header_ns_cpp, name, "$" );
-        h_f_ns = h_f =  replace_placeholder(h_f, name, "@" );
-        return h_f_ns
-    return  replace_placeholder(template_header_cpp, name, "$" );
+        h_f_up =  replace_placeholder(h_f, name.upper(), "*" );
+        h_f_ns = h_f =  replace_placeholder(h_f_up, ns, "@" );
+        h_f_ns_f = h_f =  replace_placeholder(h_f_ns, ns.upper(), "£" );
+        return h_f_ns_f
+    h_f  = replace_placeholder(template_header_cpp, name, "$" );
+    return  replace_placeholder(h_f, name.upper(), "*" );
 
 def make_class(arg, h_flag):
-    # ns_name =   parse_suite_from_maketest(arg)
-    # f_name = parse_test_from_maketest(arg)
-    f_name = arg
-    ns_name = False
+    ns_name =   parse_suite_from_maketest(arg)
+    if(ns_name):
+        f_name = arg[len(ns_name) + 1 : ]
+    else:
+        f_name = arg
+
     if(h_flag):
         create_file("include/" + f_name + ".h", get_header(f_name, ns_name))
-
+        
     
 """
 
@@ -1193,7 +1198,7 @@ def make_class(arg, h_flag):
 
 """
 
-make_class("vector", True)
+make_class("hypk:integrate", True)
 
 if (len(sys.argv) < 2):
     print("usage: dummytest <action> <type> <name>\nUse 'dummytest --help' for more information.")
