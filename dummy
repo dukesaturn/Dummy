@@ -14,25 +14,25 @@ import re
 # - COMMANDS - Command function for every cli command
 # - PROGRAM - The Main Program
 #
-# @Trick: If you want to move more fastly search `__SECTION__' in your editor for scrolling among them
+# @Trick: If you want to move more fastly search `__SECTION' in your editor for scrolling among them
 #        for example in emacs you can use this custom command:
 #
 #  (defun find-section ()
 #   "Find the next section"
 #   (interactive)
-#   (search-forward "__SECTION__"))
+#   (search-forward "__SECTION"))
 # (global-set-key (kbd "M-n") 'find-section)
 
 # (defun find-backward ()
 #   "Find the previous section"
 #   (interactive)
-#   (search-backward "__SECTION__"))
+#   (search-backward "__SECTION"))
 # (global-set-key (kbd "M-p") 'find-backward)
 
 # (defun create-section ()
 #   "Create a section"
 # 	(interactive) 
-#     (insert "__SECTION__")   
+#     (insert "__SECTION")   
 #     (comment-region (line-beginning-position) (line-end-position))
 #   )
 #
@@ -40,7 +40,7 @@ import re
 
 """
 
- // __SECTION__ COLORS //
+ // __SECTION COLORS //
 
 """
 dummy_tx_red = "\033[31m"
@@ -62,7 +62,7 @@ dummy_tx_underline = "\033[4m"
 
 """
 
- // __SECTION__ CHUNKS //
+ // __SECTION CHUNKS //
 
 """
 
@@ -171,6 +171,47 @@ extern Dummy_single_test $[];
 
 template_unit_func = """dummy_code_t $();\n"""
 
+template_header_cpp = """
+IFNDEF $_H
+#define $_H
+
+class ${
+
+   public:
+       $();
+       ~();
+};
+
+#endif
+
+"""
+template_source_cpp = """
+$::$(){}
+
+$::~$(){}
+"""
+template_header_ns_cpp = """
+IFNDEF @_$_H
+#define @_$_H
+
+namespace @{
+class ${
+
+   public:
+       $();
+       ~$();
+};
+};
+
+#endif
+
+"""
+
+template_source_ns_cpp = """
+@::$::$(){}
+
+@::$::~$(){}
+"""
 
 template_include = """
 #include <stdio.h>
@@ -636,25 +677,25 @@ DUMMY_API void dummy_test_suite(Dummy_single_test tests[], int lenght, const cha
 
 """
 
- // __SECTION__ FUNCTIONS //
+ // __SECTION FUNCTIONS //
 
 """
 
 
-"""
-Replace in a string a certain character
-"""
-def replace_placeholder(str, name, ph):
-    index_sub_str = str.find(ph)
-    final_string = str[:(index_sub_str)]+ name + \
-        str[(index_sub_str + 1): len(str)]
-    return final_string
+
+def replace_placeholder(s, name, ph):
+    """
+    Replace in a string a certain token
+    """
+    txt = s.replace(name, ph)
+    return txt
 
 
-"""
-Create an header with #include... list for the  C file
-"""
+
 def create_include_list(h_list):
+    """
+    Create an header with #include... list for the  C file
+    """
     include_list = []
     for i in h_list:
         include_list.append('#include "' + i + '"\n')
@@ -953,7 +994,7 @@ def config_json(field, value):
             
 """
 
-  // __SECTION__ COMMANDS //
+  // __SECTION COMMANDS //
 
 
 """
@@ -1106,7 +1147,7 @@ def build_all():
 
 
 
- 
+#Todo
 def build_suite():
     print("ok")
 
@@ -1125,20 +1166,35 @@ def list_all():
             i += 1
 
 
-
+#Todo
 def list_suite():
     print("ok")
 
+def get_header(name, ns):
+    if(ns):
+        h_f =  replace_placeholder(template_header_ns_cpp, name, "$" );
+        h_f_ns = h_f =  replace_placeholder(h_f, name, "@" );
+        return h_f_ns
+    return  replace_placeholder(template_header_cpp, name, "$" );
+
+def make_class(arg, h_flag):
+    # ns_name =   parse_suite_from_maketest(arg)
+    # f_name = parse_test_from_maketest(arg)
+    f_name = arg
+    ns_name = False
+    if(h_flag):
+        create_file("include/" + f_name + ".h", get_header(f_name, ns_name))
 
     
 """
 
-  // __SECTION__ PROGRAM //
+  // __SECTION PROGRAM //
 
 
 """
 
-            
+make_class("vector", True)
+
 if (len(sys.argv) < 2):
     print("usage: dummytest <action> <type> <name>\nUse 'dummytest --help' for more information.")
     exit()
