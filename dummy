@@ -15,7 +15,26 @@ import re
 # - PROGRAM - The Main Program
 #
 # @Trick: If you want to move more fastly search `__SECTION__' in your editor for scrolling among them
+#        for example in emacs you can use this custom command:
 #
+#  (defun find-section ()
+#   "Find the next section"
+#   (interactive)
+#   (search-forward "__SECTION__"))
+# (global-set-key (kbd "M-n") 'find-section)
+
+# (defun find-backward ()
+#   "Find the previous section"
+#   (interactive)
+#   (search-backward "__SECTION__"))
+# (global-set-key (kbd "M-p") 'find-backward)
+
+# (defun create-section ()
+#   "Create a section"
+# 	(interactive) 
+#     (insert "__SECTION__")   
+#     (comment-region (line-beginning-position) (line-end-position))
+#   )
 #
 
 
